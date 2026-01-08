@@ -79,11 +79,17 @@ func (c *Clients) GQueryFunc(funcName string, param string, resChan chan<- strin
 		return
 	}
 
-	rwMu.Lock()
+	// Use per-client lock to prevent one client blocking others
+	c.wsMu.Lock()
+	// Set write deadline to prevent write blocking
+	writeDeadline := time.Now().Add(10 * time.Second)
+	_ = c.clientWs.SetWriteDeadline(writeDeadline)
 	err = c.clientWs.WriteMessage(1, data)
-	rwMu.Unlock()
+	_ = c.clientWs.SetWriteDeadline(time.Time{})
+	c.wsMu.Unlock()
 	if err != nil {
 		log.Error("当前IP：", clientIp, " 写入数据失败: ", err)
+		c.isHealthy = false
 		resChan <- "rpc发送数据失败"
 		return
 	}
@@ -97,9 +103,17 @@ func (c *Clients) GQueryFunc(funcName string, param string, resChan chan<- strin
 	}
 	select {
 	case res := <-resultChan:
+		// 成功响应，重置失败计数
+		c.failCount = 0
+		c.isHealthy = true
 		resChan <- res
 	case <-ctx.Done():
-		utils.LogPrint("当前IP：", clientIp, "超时了。", MessageId)
+		// 超时，增加失败计数
+		c.failCount++
+		if c.failCount >= 3 {
+			c.isHealthy = false
+		}
+		utils.LogPrint("当前IP：", clientIp, "超时了。MessageId:", MessageId, " failCount:", c.failCount)
 		resChan <- "获取结果超时 timeout"
 	}
 }
@@ -125,7 +139,14 @@ func getRandomClient(group string, clientId string) *Clients {
 		}
 		return client
 	}
-	groupClients := make([]*Clients, 0)
+	return getHealthyClient(group, "")
+}
+
+// getHealthyClient 获取健康的客户端，排除指定的客户端
+func getHealthyClient(group string, excludeClientId string) *Clients {
+	healthyClients := make([]*Clients, 0)
+	unhealthyClients := make([]*Clients, 0)
+
 	//循环读取syncMap 获取group名字的
 	hlSyncMap.Range(func(_, value interface{}) bool {
 		tmpClients, ok := value.(*Clients)
@@ -134,17 +155,30 @@ func getRandomClient(group string, clientId string) *Clients {
 			return true
 		}
 		if tmpClients.clientGroup == group {
-			groupClients = append(groupClients, tmpClients)
+			// 排除指定的客户端
+			if excludeClientId != "" && tmpClients.clientId == excludeClientId {
+				return true
+			}
+			// 根据健康状态分类
+			if tmpClients.isHealthy && tmpClients.failCount < 3 {
+				healthyClients = append(healthyClients, tmpClients)
+			} else {
+				unhealthyClients = append(unhealthyClients, tmpClients)
+			}
 		}
 		return true
 	})
-	if len(groupClients) == 0 {
+
+	// 优先选择健康的客户端
+	candidates := healthyClients
+	if len(candidates) == 0 {
+		candidates = unhealthyClients // 如果没有健康的，退而求其次用不健康的
+	}
+	if len(candidates) == 0 {
 		return nil
 	}
 	// 使用随机数发生器
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	randomIndex := r.Intn(len(groupClients))
-	client = groupClients[randomIndex]
-	return client
-
+	randomIndex := r.Intn(len(candidates))
+	return candidates[randomIndex]
 }

@@ -2,11 +2,20 @@ var rpc_client_id, Hlclient = function (wsURL) {
     this.wsURL = wsURL;
     this.handlers = {
         _execjs: function (resolve, param) {
-            var res = eval(param)
-            if (!res) {
-                resolve("没有返回值")
-            } else {
-                resolve(res)
+            try {
+                var fn = new Function('return (async () => { ' + param + ' })()');
+                var result = fn();
+                if (result && typeof result.then === 'function') {
+                    result.then(function(res) {
+                        resolve(res !== undefined ? res : "执行成功(无返回值)");
+                    }).catch(function(err) {
+                        resolve("执行错误: " + (err.message || err));
+                    });
+                } else {
+                    resolve(result !== undefined ? result : "执行成功(无返回值)");
+                }
+            } catch (err) {
+                resolve("语法错误: " + (err.message || err));
             }
         }
     };
@@ -41,6 +50,7 @@ Hlclient.prototype.connect = function () {
     }
     this.socket.addEventListener('open', (event) => {
         console.log("rpc连接成功");
+        this._reportActions();
     });
     this.socket.addEventListener('error', (event) => {
         console.error('rpc连接出错,请检查是否打开服务端:', event.error);
@@ -58,7 +68,18 @@ Hlclient.prototype.regAction = function (func_name, func) {
     }
     console.log("register func_name: " + func_name);
     this.handlers[func_name] = func;
+    this._reportActions();
     return true
+}
+Hlclient.prototype._reportActions = function () {
+    var actions = Object.keys(this.handlers);
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.send(JSON.stringify({
+            "action": "_registerActions",
+            "message_id": "",
+            "response_data": JSON.stringify(actions)
+        }));
+    }
 }
 Hlclient.prototype.handlerRequest = function (requestJson) {
     var _this = this;
@@ -112,7 +133,7 @@ Hlclient.prototype.sendResult = function (action, message_id, e) {
         try {
             e = JSON.stringify(e)
         } catch (v) {
-            console.log(v)//不是json无需操作
+            console.log(v)
         }
     }
     this.send(JSON.stringify({"action": action, "message_id": message_id, "response_data": e}));
