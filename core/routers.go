@@ -23,6 +23,8 @@ func setJsRpcRouters(router *gin.Engine) {
 		rpc.GET("execjs", execjs)
 		rpc.POST("execjs", execjs)
 		rpc.GET("list", getList)
+		rpc.GET("details", getClientDetails)
+		rpc.DELETE("kick", kickClient)
 	}
 
 }
