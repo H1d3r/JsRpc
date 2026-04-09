@@ -1,4 +1,4 @@
-var rpc_client_id, Hlclient = function (wsURL) {
+var rpc_client_id, HlClient = function (wsURL) {
     this.wsURL = wsURL;
     this.handlers = {
         _execjs: function (resolve, param) {
@@ -19,7 +19,7 @@ var rpc_client_id, Hlclient = function (wsURL) {
     this.connect();
 }
 
-Hlclient.prototype.connect = function () {
+HlClient.prototype.connect = function () {
     var _this = this;
 
     // 处理clientId参数
@@ -88,7 +88,7 @@ Hlclient.prototype.connect = function () {
     }
 };
 
-Hlclient.prototype.reconnect = function () {
+HlClient.prototype.reconnect = function () {
     console.log("10秒后尝试重连...");
     var _this = this;
     setTimeout(function () {
@@ -96,7 +96,7 @@ Hlclient.prototype.reconnect = function () {
     }, 10000);
 };
 
-Hlclient.prototype.send = function (msg) {
+HlClient.prototype.send = function (msg) {
     if (this.isWechat) {
         // 微信环境发送消息
         if (this.socket && this.socket.readyState === 1) {
@@ -115,7 +115,7 @@ Hlclient.prototype.send = function (msg) {
     }
 };
 
-Hlclient.prototype.regAction = function (func_name, func) {
+HlClient.prototype.regAction = function (func_name, func) {
     if (typeof func_name !== 'string') throw new Error("func_name must be string");
     if (typeof func !== 'function') throw new Error("must be function");
     console.log("register func:", func_name);
@@ -123,7 +123,7 @@ Hlclient.prototype.regAction = function (func_name, func) {
     return true;
 };
 
-Hlclient.prototype.handlerRequest = function (requestJson) {
+HlClient.prototype.handlerRequest = function (requestJson) {
     var _this = this;
     try {
         var result = JSON.parse(requestJson);
@@ -162,7 +162,7 @@ Hlclient.prototype.handlerRequest = function (requestJson) {
     }
 };
 
-Hlclient.prototype.sendResult = function (action, message_id, data) {
+HlClient.prototype.sendResult = function (action, message_id, data) {
     if (typeof data === 'object') {
         try { data = JSON.stringify(data); } catch (e) { }
     }

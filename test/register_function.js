@@ -1,4 +1,4 @@
-hlc = new Hlclient("ws://127.0.0.1:12080/ws?group=zzz&name=hlg");
+hlc = new HlClient("ws://127.0.0.1:12080/ws?group=zzz&name=hlg");
 
 
 hlc.regAction("hello", function (resolve,param) {

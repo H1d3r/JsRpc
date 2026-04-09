@@ -113,9 +113,9 @@ group填写上面注入时候的，action是注册的方法名,param是可选的
 
 ```js
 // 注入环境后连接通信
-var demo = new Hlclient("ws://127.0.0.1:12080/ws?group=zzz");
+var demo = new HlClient("ws://127.0.0.1:12080/ws?group=zzz");
 // 可选  
-//var demo = new Hlclient("ws://127.0.0.1:12080/ws?group=zzz&clientId=hliang/"+new Date().getTime())
+//var demo = new HlClient("ws://127.0.0.1:12080/ws?group=zzz&clientId=hliang/"+new Date().getTime())
 ```
 
 #### I 远程调用0：

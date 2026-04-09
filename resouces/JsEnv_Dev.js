@@ -1,4 +1,4 @@
-var rpc_client_id, Hlclient = function (wsURL) {
+var rpc_client_id, HlClient = function (wsURL) {
     this.wsURL = wsURL;
     this.handlers = {
         _execjs: function (resolve, param) {
@@ -25,7 +25,7 @@ var rpc_client_id, Hlclient = function (wsURL) {
     }
     this.connect()
 }
-Hlclient.prototype.connect = function () {
+HlClient.prototype.connect = function () {
     if (this.wsURL.indexOf("clientId=") === -1 && rpc_client_id) {
         this.wsURL += "&clientId=" + rpc_client_id
     }
@@ -56,10 +56,10 @@ Hlclient.prototype.connect = function () {
         console.error('rpc连接出错,请检查是否打开服务端:', event.error);
     })
 };
-Hlclient.prototype.send = function (msg) {
+HlClient.prototype.send = function (msg) {
     this.socket.send(msg)
 }
-Hlclient.prototype.regAction = function (func_name, func) {
+HlClient.prototype.regAction = function (func_name, func) {
     if (typeof func_name !== 'string') {
         throw new Error("an func_name must be string");
     }
@@ -71,7 +71,7 @@ Hlclient.prototype.regAction = function (func_name, func) {
     this._reportActions();
     return true
 }
-Hlclient.prototype._reportActions = function () {
+HlClient.prototype._reportActions = function () {
     var actions = Object.keys(this.handlers);
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
         this.send(JSON.stringify({
@@ -81,7 +81,7 @@ Hlclient.prototype._reportActions = function () {
         }));
     }
 }
-Hlclient.prototype.handlerRequest = function (requestJson) {
+HlClient.prototype.handlerRequest = function (requestJson) {
     var _this = this;
     try {
         var result = JSON.parse(requestJson)
@@ -128,7 +128,7 @@ Hlclient.prototype.handlerRequest = function (requestJson) {
         _this.sendResult(action, message_id, "" + e);
     }
 }
-Hlclient.prototype.sendResult = function (action, message_id, e) {
+HlClient.prototype.sendResult = function (action, message_id, e) {
     if (typeof e === 'object' && e !== null) {
         try {
             e = JSON.stringify(e)
